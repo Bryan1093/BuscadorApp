@@ -1,0 +1,12 @@
+# Requisitos para compilar AppBuscador a ejecutable
+# Instala estas dependencias antes de compilar
+
+# Herramienta de compilación
+pyinstaller>=5.0
+
+# Dependencias de la aplicación (ya deberían estar instaladas)
+Pillow>=9.0.0
+PyMuPDF>=1.21.0
+
+# Opcional: Para interfaz gráfica de compilación
+auto-py-to-exe>=2.0.0

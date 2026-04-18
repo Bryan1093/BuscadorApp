@@ -1,0 +1,5 @@
+1) Arreglar los filtros disposición y espaciados además de que los demás filtros se lean con relación a 
+la universidad además de poder escribir y que filtre
+2) Barra de búsqueda que funcione correctamente por nombre del docente
+3) Arreglar la descarga de expediente para que descargue todo el contenido
+4) 
