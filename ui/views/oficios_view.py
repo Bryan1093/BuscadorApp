@@ -7,6 +7,7 @@ import threading
 from ui.styles import configurar_estilos
 from ui.components.header import crear_encabezado, crear_resumen
 from ui.components.filters import (crear_filtros_oficios, crear_entrada_busqueda,
+                                   crear_entrada_busqueda_con_autocompletado,
                                    actualizar_anios_oficios, actualizar_tipo_oficios)
 from ui.components.results import (crear_resultados_oficios, poblar_resultados_oficios,
                                    crear_botones_oficios)
@@ -17,10 +18,34 @@ from services.search_service import buscar_oficios
 from services.file_service import abrir_pdf, descargar_pdf, cargar_documentos_oficios
 from utils.file_utils import obtener_estructura_oficios
 from utils.path_utils import encontrar_rutas_drive
+from utils.text_utils import normalizar_texto
 from ui.views.login_view import limpiar_ventana
 import config.settings as settings
 from utils.file_utils import resource_path
 from PIL import Image, ImageTk
+
+
+def obtener_sugerencias_oficio(texto):
+    """
+    Retorna sugerencias de nombres de oficios que contienen el texto.
+    Utiliza normalización para ser tolerant a tildes.
+    """
+    if not texto:
+        return []
+    if not settings.documentos_oficios:
+        return []
+    
+    texto_norm = normalizar_texto(texto)
+    nombres = set()
+    
+    for doc in settings.documentos_oficios:
+        nombre = doc.get('nombre', '')
+        if nombre and texto_norm in normalizar_texto(nombre):
+            # Limitar longitud para visualización
+            nombre_corto = nombre[:50] + '...' if len(nombre) > 50 else nombre
+            nombres.add(nombre_corto)
+    
+    return sorted(nombres)[:5]
 
 
 class OficiosView:
@@ -221,11 +246,13 @@ class OficiosView:
         # Filtros
         self.combo_anio, self.combo_tipo = crear_filtros_oficios(filtros_frame)
         
-        # Entrada de búsqueda
-        self.entrada_nombre = crear_entrada_busqueda(
+        # Entrada de búsqueda con autocompletado
+        self.entrada_nombre = crear_entrada_busqueda_con_autocompletado(
             filtros_frame, 
             "Buscar por nombre o número de oficio:",
-            ancho=50
+            ancho=50,
+            callback_buscar=self.buscar,
+            callback_sugerencias=obtener_sugerencias_oficio
         )
         
         # Botones de acción

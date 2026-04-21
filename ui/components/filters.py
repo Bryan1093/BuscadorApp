@@ -219,17 +219,26 @@ def actualizar_universidades(combo_universidad, combo_programa, combo_estudiante
         combo_programa: Combobox de programa
         combo_estudiante: Combobox de estudiante
     """
-    universidades = obtener_todas_universidades_combinadas(
-        settings.ruta_doctorados, settings.ruta_doctorados2)
-    settings.universidades_lista = universidades
+    try:
+        universidades = obtener_todas_universidades_combinadas(
+            settings.ruta_doctorados, settings.ruta_doctorados2)
+        settings.universidades_lista = universidades
+    except Exception as e:
+        print(f"[ERROR] obtener_todas_universidades_combinadas: {e}")
+        universidades = []
+
     opciones = ['(Todos)'] + universidades
     combo_universidad['values'] = opciones
     combo_universidad.set('(Todos)')
-    
+
     # Configurar autocompletado
     configurar_autocompletado(combo_universidad, opciones)
-    
-    actualizar_programas(combo_universidad, combo_programa, combo_estudiante)
+
+    # Actualizar programas (si falla NO impide cargar universities)
+    try:
+        actualizar_programas(combo_universidad, combo_programa, combo_estudiante)
+    except Exception as e:
+        print(f"[ERROR] actualizar_programas: {e}")
 
 
 def actualizar_programas(combo_universidad, combo_programa, combo_estudiante):
@@ -333,13 +342,14 @@ def actualizar_tipo_oficios(combo_anio, combo_tipo):
     configurar_autocompletado(combo_tipo, opciones)
 
 
-def crear_entrada_busqueda(ventana, texto_placeholder, ancho=80):
+def crear_entrada_busqueda(ventana, texto_placeholder, ancho=80, callback_buscar=None):
     """
     Crea un campo de entrada para búsqueda
     Args:
         ventana: Ventana o frame padre
         texto_placeholder: Texto del placeholder
         ancho: Ancho del campo de entrada
+        callback_buscar: Función a ejecutar cuando se presiona Enter (opcional)
     Returns:
         Entry: Campo de entrada
     """
@@ -353,5 +363,82 @@ def crear_entrada_busqueda(ventana, texto_placeholder, ancho=80):
                       relief="solid", bd=1, bg="white", fg="#2c3e50")
     entrada.pack(pady=5)
     entrada.insert(0, "")
+    
+    # Binding para ejecutar búsqueda con Enter
+    if callback_buscar:
+        entrada.bind('<Return>', lambda e: callback_buscar())
+    
+    return entrada
+
+
+def crear_entrada_busqueda_con_autocompletado(ventana, texto_placeholder, ancho=80, callback_buscar=None, callback_sugerencias=None, callback_seleccion=None):
+    """
+    Crea campo de búsqueda con autocompletado tipo Google.
+    
+    Args:
+        ventana: Ventana o frame padre
+        texto_placeholder: Texto del placeholder
+        ancho: Ancho del campo de entrada
+        callback_buscar: Función a ejecutar cuando se presiona Enter (opcional)
+        callback_sugerencias: callable que recibe texto y retorna lista de sugerencias
+        callback_seleccion: callable que recibe el texto seleccionado del listbox (opcional)
+    
+    Returns:
+        Entry: Campo de entrada
+    """
+    frame_entrada = tk.Frame(ventana, bg="#ecf0f1")
+    frame_entrada.pack(pady=(5, 10), padx=30)
+    
+    tk.Label(frame_entrada, text=f"🔍 {texto_placeholder}", 
+            font=("Segoe UI", 10, 'bold'), bg="#ecf0f1", fg="#2c3e50").pack(pady=(0, 5))
+    
+    entrada = tk.Entry(frame_entrada, width=ancho, font=("Segoe UI", 11), 
+                      relief="solid", bd=1, bg="white", fg="#2c3e50")
+    entrada.pack(pady=5)
+    
+    # Lista de sugerencias (Listbox oculto inicialmente)
+    lista_sugerencias = tk.Listbox(frame_entrada, width=ancho-2, height=4, font=("Segoe UI", 10),
+                             bg="#fafafa", fg="#2c3e50", relief="solid", bd=1)
+    lista_sugerencias.pack_forget()
+    
+    def on_key_release(event):
+        texto = entrada.get().strip()
+        if not texto or not callback_sugerencias:
+            lista_sugerencias.pack_forget()
+            return
+        
+        # Obtener sugerencias
+        sugerencias = callback_sugerencias(texto)
+        
+        if sugerencias:
+            lista_sugerencias.delete(0, tk.END)
+            for s in sugerencias[:5]:  # Max 5 sugerencias
+                lista_sugerencias.insert(tk.END, s)
+            lista_sugerencias.pack()
+        else:
+            lista_sugerencias.pack_forget()
+    
+    def on_select_sugerencia(event):
+        seleccion = lista_sugerencias.curselection()
+        if seleccion:
+            texto = lista_sugerencias.get(seleccion[0])
+            entrada.delete(0, tk.END)
+            entrada.insert(0, texto)
+            lista_sugerencias.pack_forget()
+            if callback_seleccion:
+                callback_seleccion(texto)
+            elif callback_buscar:
+                callback_buscar()
+    
+    def on_focus_out(event):
+        # Ocultar lista cuando pierde el foco (con delay para permitir clicks)
+        lista_sugerencias.after(200, lambda: lista_sugerencias.pack_forget())
+    
+    entrada.bind('<KeyRelease>', on_key_release)
+    lista_sugerencias.bind('<<ListboxSelect>>', on_select_sugerencia)
+    entrada.bind('<FocusOut>', on_focus_out)
+    
+    if callback_buscar:
+        entrada.bind('<Return>', lambda e: callback_buscar())
     
     return entrada

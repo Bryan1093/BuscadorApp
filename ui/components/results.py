@@ -61,10 +61,11 @@ def crear_resultados_docentes(ventana, on_select, on_double_click, on_toggle_sel
     frame_resultados = tk.Frame(frame_contenedor, bg="#ffffff", relief="solid", bd=1)
     frame_resultados.pack(fill="both", expand=True, padx=2, pady=2)
     
-    # Scrollbar
-    scrollbar = tk.Scrollbar(frame_resultados, orient="vertical", width=14, 
-                            bg="#ecf0f1", troughcolor="#ecf0f1", 
-                            activebackground="#95a5a6", relief='flat', bd=0)
+# Scrollbar moderna - ESTILO SEGURO
+    try:
+        scrollbar = ttk.Scrollbar(frame_resultados, orient="vertical", style="Vertical.TScrollbar")
+    except:
+        scrollbar = ttk.Scrollbar(frame_resultados, orient="vertical")
     scrollbar.pack(side="right", fill="y")
     
     # Treeview
@@ -72,7 +73,7 @@ def crear_resultados_docentes(ventana, on_select, on_double_click, on_toggle_sel
                              yscrollcommand=scrollbar.set)
     scrollbar.config(command=resultados.yview)
     resultados.pack(side="left", fill="both", expand=True)
-    
+
     # Configurar columnas - checkbox más grande (60px)
     resultados.heading("Seleccion", text="☑")
     resultados.column("Seleccion", anchor="center", width=60, minwidth=60)
@@ -129,10 +130,11 @@ def crear_resultados_oficios(ventana, on_select, on_double_click):
     frame_resultados = tk.Frame(frame_contenedor, bg="#ffffff", relief='solid', bd=1)
     frame_resultados.pack(fill="both", expand=True, padx=2, pady=2)
     
-    # Scrollbar
-    scrollbar = tk.Scrollbar(frame_resultados, orient="vertical", width=14, 
-                            bg="#ecf0f1", troughcolor="#ecf0f1", 
-                            activebackground="#95a5a6", relief='flat', bd=0)
+    # Scrollbar moderna - ESTILO SEGURO
+    try:
+        scrollbar = ttk.Scrollbar(frame_resultados, orient="vertical", style="Vertical.TScrollbar")
+    except:
+        scrollbar = ttk.Scrollbar(frame_resultados, orient="vertical")
     scrollbar.pack(side="right", fill="y")
     
     # Treeview

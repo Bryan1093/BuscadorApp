@@ -10,7 +10,7 @@ def buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item):
     """
     Busca documentos según los filtros aplicados.
     Las búsquedas son tolerantes a tildes, mayúsculas/minúsculas y eñes.
-    
+
     Args:
         filtro_u: Filtro de universidad
         filtro_p: Filtro de programa
@@ -21,27 +21,35 @@ def buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item):
         list: Lista de documentos encontrados
     """
     encontrados = []
-    
+
+    # Verificar que haya documentos cargados
+    if not settings.documentos_drive:
+        print("[WARN] buscar_documentos: documentos_drive está vacío")
+        return []
+
     # Normalizar filtros de texto
     filtro_nombre_norm = normalizar_texto(filtro_nombre) if filtro_nombre else ""
-    
-    for d in settings.documentos_drive:
-        # Comparaciones normalizadas (tolerantes a tildes y mayúsculas)
-        match_u = filtro_u == '(Todos)' or normalizar_texto(d['universidad']) == normalizar_texto(filtro_u)
-        match_p = filtro_p == '(Todos)' or normalizar_texto(d['programa']) == normalizar_texto(filtro_p)
-        match_e = filtro_e == '(Todos)' or normalizar_texto(d['estudiante']) == normalizar_texto(filtro_e)
-        match_nombre = not filtro_nombre_norm or filtro_nombre_norm in normalizar_texto(d['nombre'])
-        
-        if match_u and match_p and match_e and match_nombre:
-            
-            if filtro_item == '(Todos)':
-                encontrados.append(d)
-            else:
-                alias_list = settings.items_clave.get(filtro_item, [])
-                nombre_doc_norm = normalizar_texto(d['nombre'])
-                if any(normalizar_texto(alias) in nombre_doc_norm for alias in alias_list):
+
+    try:
+        for d in settings.documentos_drive:
+            # Comparaciones normalizadas (tolerantes a tildes y mayúsculas) (y strings vacíos como 'Todos')
+            match_u = not filtro_u or filtro_u == '(Todos)' or normalizar_texto(d['universidad']) == normalizar_texto(filtro_u)
+            match_p = not filtro_p or filtro_p == '(Todos)' or normalizar_texto(d['programa']) == normalizar_texto(filtro_p)
+            match_e = not filtro_e or filtro_e == '(Todos)' or normalizar_texto(d['estudiante']) == normalizar_texto(filtro_e)
+            match_nombre = not filtro_nombre_norm or filtro_nombre_norm in normalizar_texto(d['nombre'])
+
+            if match_u and match_p and match_e and match_nombre:
+
+                if not filtro_item or filtro_item == '(Todos)':
                     encontrados.append(d)
-    
+                else:
+                    alias_list = settings.items_clave.get(filtro_item, [])
+                    nombre_doc_norm = normalizar_texto(d['nombre'])
+                    if any(normalizar_texto(alias) in nombre_doc_norm for alias in alias_list):
+                        encontrados.append(d)
+    except Exception as e:
+        print(f"[ERROR] buscar_documentos: {e}")
+
     return encontrados
 
 
@@ -79,10 +87,13 @@ def obtener_programas_filtrados(universidad):
     Returns:
         list: Lista ordenada de programas
     """
+    if not settings.documentos_drive:
+        return []
+
     if universidad == '(Todos)':
         programas = sorted(set(doc['programa'] for doc in settings.documentos_drive))
     else:
-        programas = sorted(set(doc['programa'] for doc in settings.documentos_drive 
+        programas = sorted(set(doc['programa'] for doc in settings.documentos_drive
                              if doc['universidad'] == universidad))
     return programas
 
@@ -96,6 +107,9 @@ def obtener_estudiantes_filtrados(universidad, programa):
     Returns:
         list: Lista ordenada de estudiantes
     """
+    if not settings.documentos_drive:
+        return []
+
     estudiantes = set()
     for doc in settings.documentos_drive:
         if (universidad == '(Todos)' or doc['universidad'] == universidad) and \

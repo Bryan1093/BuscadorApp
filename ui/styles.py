@@ -35,6 +35,23 @@ def configurar_estilos():
               background=[('selected', '#3498db')], 
               foreground=[('selected', 'white')])
     
+    try:
+        # Scrollbar moderna - INVISIBLE POR DEFECTO
+        style.configure("Vertical.TScrollbar",
+                        gripcount=0,
+                        background="#E2E8F0",
+                        troughcolor="#FFFFFF",
+                        bordercolor="#FFFFFF",
+                        darkcolor="#FFFFFF",
+                        lightcolor="#FFFFFF",
+                        arrowsize=0,
+                        width=10)
+
+        style.map("Vertical.TScrollbar",
+                  background=[('active', '#2D4B5E'), ('!active', '#E2E8F0')])
+    except Exception as e:
+        print(f"[WARN] Error configurando scrollbar custom: {e}")
+    
     # Botones principales con diseño moderno
     style.configure('TButton', 
                     font=('Segoe UI', 11, 'bold'), 
