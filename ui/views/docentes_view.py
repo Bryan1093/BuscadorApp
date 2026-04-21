@@ -553,14 +553,30 @@ class DocentesView:
         scrollbar.config(command=self.resultados.yview)
         self.resultados.pack(fill="both", expand=True)
 
-        # Configurar columnas - seleccion con toggle y cursor de mano
-        # Nota: anchor NO es válido para heading(), solo para column()
+        # Configurar columnas - distribución proporcional (25/20/25/30)
+        # Checkbox: ancho fijo de 50px
         self.resultados.heading("Seleccion", text="☑", command=self.toggle_seleccionar_todos)
-        self.resultados.column("Seleccion", anchor="center", width=60, minwidth=60)
+        self.resultados.column("Seleccion", anchor="center", width=50, minwidth=50, stretch=False)
 
-        for col in columnas[1:]:
-            self.resultados.heading(col, text=col)
-            self.resultados.column(col, anchor="center", width=150, minwidth=100)
+        # Universidad: 25% - stretch=True para proporcionalidad
+        self.resultados.heading("Universidad", text="Universidad")
+        self.resultados.column("Universidad", anchor="w", width=200, minwidth=150, stretch=True)
+
+        # Programa: 20% - stretch=True para proporcionalidad
+        self.resultados.heading("Programa", text="Programa")
+        self.resultados.column("Programa", anchor="w", width=160, minwidth=120, stretch=True)
+
+        # Estudiante: 25% - stretch=True para proporcionalidad
+        self.resultados.heading("Estudiante", text="Estudiante")
+        self.resultados.column("Estudiante", anchor="w", width=200, minwidth=150, stretch=True)
+
+        # Nombre: 30% - stretch=True para proporcionalidad (header vacío)
+        self.resultados.heading("Nombre", text="")
+        self.resultados.column("Nombre", anchor="w", width=240, minwidth=180, stretch=True)
+
+        # Columna vacía extra para que el header cubra hasta el scrollbar
+        self.resultados.column("#0", anchor="w", width=0, minwidth=0, stretch=True)
+        self.resultados.heading("#0", text="")
 
         # Zebra stripes con los nuevos colores
         self.resultados.tag_configure('odd', background=COLOR_ZEBRA_ODD)
