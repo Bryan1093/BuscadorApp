@@ -5,7 +5,7 @@ import tkinter as tk
 from datetime import datetime
 
 
-def mostrar_seleccion(ventana, nombre_usuario, on_docentes, on_oficios):
+def mostrar_seleccion(ventana, nombre_usuario, on_docentes, on_oficios, on_acerca_de):
     """
     Muestra pantalla de selección de módulo
     Args:
@@ -13,6 +13,7 @@ def mostrar_seleccion(ventana, nombre_usuario, on_docentes, on_oficios):
         nombre_usuario: Nombre del usuario
         on_docentes: Callback para módulo de docentes
         on_oficios: Callback para módulo de oficios
+        on_acerca_de: Callback para ver información de la app
     """
     from ui.views.login_view import limpiar_ventana
     limpiar_ventana(ventana)
@@ -115,3 +116,29 @@ def mostrar_seleccion(ventana, nombre_usuario, on_docentes, on_oficios):
     
     tk.Label(footer, text=f"🕐 {hora} • {fecha}", font=("Segoe UI", 11),
             bg="#f5f7fa", fg="#95a5a6").pack()
+    
+    # Botón Acerca de
+    btn_acerca = tk.Button(
+        footer,
+        text="ℹ️ Acerca de",
+        command=on_acerca_de,
+        font=("Segoe UI", 10),
+        bg="#f5f7fa",
+        fg="#6c757d",
+        relief="flat",
+        bd=0,
+        cursor="hand2",
+        padx=15,
+        pady=8
+    )
+    btn_acerca.pack(pady=(15, 0))
+    
+    # Efecto hover
+    def on_enter_acerca(e):
+        btn_acerca.config(fg="#0EA5E9")
+    
+    def on_leave_acerca(e):
+        btn_acerca.config(fg="#6c757d")
+    
+    btn_acerca.bind("<Enter>", on_enter_acerca)
+    btn_acerca.bind("<Leave>", on_leave_acerca)

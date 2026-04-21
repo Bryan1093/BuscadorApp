@@ -7,6 +7,7 @@ from ui.views.login_view import mostrar_login, cerrar_sesion
 from ui.views.selection_view import mostrar_seleccion
 from ui.views.docentes_view import mostrar_docentes, DocentesView
 from ui.views.oficios_view import mostrar_oficios, OficiosView
+from ui.views.acerca_de_view import mostrar_acerca_de, AcercaDeView
 from utils.path_utils import encontrar_rutas_drive
 import config.settings as settings
 
@@ -22,6 +23,7 @@ class AppBuscador:
         # Instancias de vistas (para mantener estado)
         self.docentes_view = None
         self.oficios_view = None
+        self.acerca_de_view = None
         
         # Inicializar rutas de Drive
         self._inicializar_rutas()
@@ -56,7 +58,8 @@ class AppBuscador:
         """
         mostrar_seleccion(ventana, nombre_usuario, 
                          lambda: self.mostrar_modulo_docentes(ventana),
-                         lambda: self.mostrar_modulo_oficios(ventana))
+                         lambda: self.mostrar_modulo_oficios(ventana),
+                         lambda: self.mostrar_acerca_de(ventana))
     
     def mostrar_modulo_docentes(self, ventana):
         """
@@ -96,7 +99,22 @@ class AppBuscador:
         """
         mostrar_seleccion(ventana, settings.nombre_usuario_actual,
                          lambda: self.mostrar_modulo_docentes(ventana),
-                         lambda: self.mostrar_modulo_oficios(ventana))
+                         lambda: self.mostrar_modulo_oficios(ventana),
+                         lambda: self.mostrar_acerca_de(ventana))
+    
+    def mostrar_acerca_de(self, ventana):
+        """
+        Muestra la pantalla de Acerca de
+        Args:
+            ventana: Ventana principal
+        """
+        if self.acerca_de_view is None:
+            self.acerca_de_view = AcercaDeView(
+                ventana,
+                lambda: self.volver_a_seleccion(ventana)
+            )
+        else:
+            self.acerca_de_view.refrescar_vista()
     
     def cerrar_sesion_handler(self, ventana):
         """
