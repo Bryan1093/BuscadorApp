@@ -44,7 +44,9 @@ items_clave = {
     "23. Contrato Senescyt": ["c.senescyt"],
     "24. Acta Finiquito": ["a.finiquito"],
     "25. Contrato apoyo financiero": ["c.apoyofinanciero"],
-    "26. Contrato reducción carga horaria": ["c.reduccionhoraria"]
+    "26. Contrato reducción carga horaria": ["c.reduccionhoraria"],
+    "27. Documentos Precontractuales": ["DocumentosPrecontractuales"],
+    "28. Extensión de Beca": ["extensionbeca"]
 }
 
 # Variables globales para oficios

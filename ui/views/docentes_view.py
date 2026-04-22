@@ -151,6 +151,17 @@ class DocentesView:
         # Variable para búsqueda reactiva
         self.search_text = tk.StringVar()
 
+        # Cargar logo para placeholder
+        self.logo_placeholder = None
+        try:
+            from utils.file_utils import resource_path
+            logo_path = resource_path('imagenes/logouce.png')
+            logo_img = Image.open(logo_path)
+            logo_img = logo_img.resize((200, 200), Image.LANCZOS)
+            self.logo_placeholder = ImageTk.PhotoImage(logo_img)
+        except Exception as e:
+            print(f"[WARN] No se pudo cargar logo: {e}")
+
         # Configurar estilos modernos
         self._configurar_estilos()
 
@@ -303,6 +314,10 @@ class DocentesView:
         container = tk.Frame(self.ventana, bg=COLOR_FONDO_MAIN)
         container.pack(fill='both', expand=True)
 
+        # Contenedor interno para el contenido principal
+        self.content_frame = tk.Frame(container, bg=COLOR_FONDO_MAIN)
+        self.content_frame.pack(side='left', fill='both', expand=True)
+
         # ==============================================================================
         # SIDEBAR (280px fijo) - Fondo Gris Claro
         # ==============================================================================
@@ -409,6 +424,42 @@ class DocentesView:
         self.combo_item_clave = ttk.Combobox(frame_filtro_item, state="normal", font=('Segoe UI', 10), height=9)
         self.combo_item_clave.pack(fill='x', padx=20)
 
+        # --- Botones de acción ---
+        frame_botones_accion = tk.Frame(sidebar, bg=COLOR_FONDO_SIDEBAR)
+        frame_botones_accion.pack(fill='x', pady=(15, 5))
+
+        # Botón Filtrar
+        self.btn_filtrar = tk.Button(
+            frame_botones_accion,
+            text="🔍  Filtrar",
+            font=('Segoe UI', 10, 'bold'),
+            bg=COLOR_PRIMARY,
+            fg='white',
+            relief='flat',
+            bd=0,
+            padx=15,
+            pady=8,
+            cursor='hand2',
+            command=self.buscar
+        )
+        self.btn_filtrar.pack(fill='x', padx=20, pady=3)
+
+        # Botón Limpiar Filtros
+        btn_limpiar = tk.Button(
+            frame_botones_accion,
+            text="✕  Limpiar Filtros",
+            font=('Segoe UI', 10),
+            bg=COLOR_BORDE,
+            fg=COLOR_TEXTO,
+            relief='flat',
+            bd=0,
+            padx=15,
+            pady=8,
+            cursor='hand2',
+            command=self.limpiar_filtros
+        )
+        btn_limpiar.pack(fill='x', padx=20, pady=3)
+
         # --- Información de usuario ---
         tk.Frame(sidebar, bg=COLOR_BORDE, height=1).pack(pady=10, padx=20, fill='x')
 
@@ -461,7 +512,7 @@ class DocentesView:
         # MAIN CONTENT (derecha, expande) - Fondo Blanco con Padding 30px
         # ==============================================================================
         # Main content con espaciado global de 40px
-        main = tk.Frame(container, bg=COLOR_FONDO_MAIN)
+        main = tk.Frame(self.content_frame, bg=COLOR_FONDO_MAIN)
         main.pack(side='left', fill='both', expand=True, padx=40, pady=40)
 
         # --- Toolbar con frame contenedor de altura fija ---
@@ -538,7 +589,25 @@ class DocentesView:
         resultados_frame = tk.Frame(main, bg=COLOR_FONDO_MAIN)
         resultados_frame.pack(fill='both', expand=True)
 
-        columnas = ("Seleccion", "Universidad", "Programa", "Estudiante", "Nombre")
+        # Placeholder con logo (oculto inicialmente)
+        self.frame_placeholder = tk.Frame(resultados_frame, bg=COLOR_FONDO_MAIN)
+        self.frame_placeholder.pack(fill='both', expand=True)
+
+        tk.Label(
+            self.frame_placeholder,
+            image=self.logo_placeholder,
+            bg=COLOR_FONDO_MAIN
+        ).pack(pady=20)
+
+        tk.Label(
+            self.frame_placeholder,
+            text="Usa los filtros y presiona '🔍 Filtrar' para buscar documentos",
+            font=('Segoe UI', 14),
+            fg=COLOR_TEXTO_SEC,
+            bg=COLOR_FONDO_MAIN
+        ).pack(pady=5)
+
+        columnas = ("Seleccion", "Universidad", "Programa", "Estudiante", "Documento")
 
         # Scrollbar moderna - ESTILO SEGURO
         try:
@@ -547,36 +616,32 @@ class DocentesView:
             scrollbar = ttk.Scrollbar(resultados_frame, orient="vertical")
         scrollbar.pack(side="right", fill="y")
 
-        # Treeview
+        # Treeview (oculto inicialmente)
         self.resultados = ttk.Treeview(resultados_frame, columns=columnas, show="headings",
                                      yscrollcommand=scrollbar.set)
         scrollbar.config(command=self.resultados.yview)
         self.resultados.pack(fill="both", expand=True)
 
-        # Configurar columnas - distribución proporcional (25/20/25/30)
+        # Configurar columnas - distribución proporcional
         # Checkbox: ancho fijo de 50px
         self.resultados.heading("Seleccion", text="☑", command=self.toggle_seleccionar_todos)
         self.resultados.column("Seleccion", anchor="center", width=50, minwidth=50, stretch=False)
 
-        # Universidad: 25% - stretch=True para proporcionalidad
+        # Universidad: proporcional
         self.resultados.heading("Universidad", text="Universidad")
         self.resultados.column("Universidad", anchor="w", width=200, minwidth=150, stretch=True)
 
-        # Programa: 20% - stretch=True para proporcionalidad
+        # Programa: proporcional
         self.resultados.heading("Programa", text="Programa")
-        self.resultados.column("Programa", anchor="w", width=160, minwidth=120, stretch=True)
+        self.resultados.column("Programa", anchor="w", width=180, minwidth=120, stretch=True)
 
-        # Estudiante: 25% - stretch=True para proporcionalidad
+        # Estudiante: proporcional
         self.resultados.heading("Estudiante", text="Estudiante")
-        self.resultados.column("Estudiante", anchor="w", width=200, minwidth=150, stretch=True)
+        self.resultados.column("Estudiante", anchor="w", width=200, minwidth=120, stretch=True)
 
-        # Nombre: 30% - stretch=True para proporcionalidad (header vacío)
-        self.resultados.heading("Nombre", text="")
-        self.resultados.column("Nombre", anchor="w", width=240, minwidth=180, stretch=True)
-
-        # Columna vacía extra para que el header cubra hasta el scrollbar
-        self.resultados.column("#0", anchor="w", width=0, minwidth=0, stretch=True)
-        self.resultados.heading("#0", text="")
+        # Documento: nombre del tipo de documento
+        self.resultados.heading("Documento", text="Documento")
+        self.resultados.column("Documento", anchor="w", width=200, minwidth=150, stretch=True)
 
         # Zebra stripes con los nuevos colores
         self.resultados.tag_configure('odd', background=COLOR_ZEBRA_ODD)
@@ -586,21 +651,6 @@ class DocentesView:
         self.resultados.tag_configure('odd', background='#F1F5F9')
         self.resultados.tag_configure('even', background='#FFFFFF')
         self.resultados.tag_configure('selected', background='#0EA5E9', foreground='white')
-
-        # ==============================================================================
-        # Checkbox Tags con fuente grande
-        # ==============================================================================
-        self.resultados.tag_configure('checkbox', font=self.font_checkbox)
-        self.resultados.tag_configure('header_check', font=self.font_checkbox)
-
-        # ==============================================================================
-        # INTERACTIVIDAD - Checkboxes Funcionales
-        # ==============================================================================
-        # Configurar columna de selección (centrada y fija)
-        self.resultados.column("Seleccion", width=50, anchor='center', minwidth=50, stretch=False)
-
-        # Binding para clic en checkbox
-        self.resultados.bind('<Button-1>', self.on_tree_click)
 
         # --- Status Bar ---
         status_bar_frame = tk.Frame(main, bg=COLOR_FONDO_SIDEBAR, relief="sunken", bd=0, height=30)
@@ -618,11 +668,20 @@ class DocentesView:
         self.status_bar.pack(fill='x', padx=10, pady=0)
 
         # ==============================================================================
-        # EVENTOS Y BINDINGS
+        # Checkbox Tags con fuente grande
         # ==============================================================================
-        # Seleccionar resultado
+        self.resultados.tag_configure('checkbox', font=self.font_checkbox)
+        self.resultados.tag_configure('header_check', font=self.font_checkbox)
+
+        # ==============================================================================
+        # INTERACTIVIDAD - Checkboxes Funcionales
+        # ==============================================================================
+        # Configurar columna de selección (centrada y fija)
+        self.resultados.column("Seleccion", width=50, anchor='center', minwidth=50, stretch=False)
+
+        # Binding para clic en checkbox
+        self.resultados.bind('<Button-1>', self.on_tree_click)
         self.resultados.bind("<<TreeviewSelect>>", self.on_select_result)
-        # Doble click para abrir
         self.resultados.bind("<Double-1>", self.on_double_click)
 
         # Atajos de teclado
@@ -630,13 +689,13 @@ class DocentesView:
         self.ventana.bind('<Return>', lambda e: self.abrir_pdf_handler())
         self.ventana.bind('<Delete>', lambda e: self.limpiar_filtros())
 
-        #Bindings para actualizar combos dependientes Y aplicar filtros automáticamente
-        self.combo_universidad.bind("<<ComboboxSelected>>", lambda e: (self.actualizar_programas(), self.buscar()))
-        self.combo_programa.bind("<<ComboboxSelected>>", lambda e: (self.actualizar_estudiantes(), self.buscar()))
-        self.combo_estudiante.bind("<<ComboboxSelected>>", lambda e: (self.actualizar_items_clave(), self.buscar()))
+        #Bindings para actualizar combos dependientes SIN búsqueda automática
+        self.combo_universidad.bind("<<ComboboxSelected>>", lambda e: (self.actualizar_programas()))
+        self.combo_programa.bind("<<ComboboxSelected>>", lambda e: (self.actualizar_estudiantes()))
+        self.combo_estudiante.bind("<<ComboboxSelected>>", lambda e: (self.actualizar_items_clave()))
 
-        # Binding para ítem clave - buscar al seleccionar
-        self.combo_item_clave.bind("<<ComboboxSelected>>", lambda e: self.buscar())
+        # Binding para ítem clave - sin búsqueda automática
+        self.combo_item_clave.bind("<<ComboboxSelected>>", lambda e: None)
 
         # Inicializar filtros
         self._inicializar_filtros()
@@ -647,9 +706,8 @@ class DocentesView:
         else:
             # Cargar documentos (usará caché si ya está cargado)
             self._cargar_documentos()
-            # Si ya están en caché, poblar resultados después de un pequeño delay
-            if settings.documentos_cargados:
-                self.ventana.after(200, self.buscar)
+            # Mostrar placeholder inicial en vez de buscar automáticamente
+            self._mostrar_placeholder()
 
     # ==============================================================================
     # MÉTODOS DE BÚSQUEDA CON DEBOUNCE
@@ -668,8 +726,8 @@ class DocentesView:
     def on_search_change(self, *args):
         """Callback cuando cambia el texto de búsqueda - implementa debounce"""
         if self.after_id:
-            self.after_cancel(self.after_id)
-        self.after_id = self.after(300, self.ejecutar_busqueda)
+            self.ventana.after_cancel(self.after_id)
+        self.after_id = self.ventana.after(300, self.ejecutar_busqueda)
 
     def ejecutar_busqueda(self):
         """Ejecuta búsqueda en thread separado para no bloquear UI"""
@@ -681,9 +739,9 @@ class DocentesView:
         filtro_e = self.combo_estudiante.get()
         filtro_item = self.combo_item_clave.get()
 
-        # Si no hay filtros activos y el search está vacío, limpiar y salir
+        # Si no hay filtros activos y el search está vacío, mostrar placeholder
         if not texto and filtro_u == '(Todos)' and filtro_p == '(Todos)' and filtro_e == '(Todos)' and filtro_item == '(Todos)':
-            self.buscar_con_filtros('', filtro_u, filtro_p, filtro_e, filtro_item)
+            self._mostrar_placeholder()
             return
 
         # Usar threading para no bloquear UI
@@ -702,7 +760,7 @@ class DocentesView:
     def buscar_con_filtros(self, filtro_nombre, filtro_u, filtro_p, filtro_e, filtro_item):
         """Ejecuta la búsqueda con los filtros dados"""
         encontrados = buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item)
-        self._poblar_resultados(encontrados)
+        self._poblar_resultados(encontrados, filtro_item)
 
     def buscar(self):
         """Ejecuta la búsqueda de documentos"""
@@ -713,28 +771,41 @@ class DocentesView:
         filtro_item = self.combo_item_clave.get()
 
         encontrados = buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item)
-        self._poblar_resultados(encontrados)
+        self._poblar_resultados(encontrados, filtro_item)
 
-    def _poblar_resultados(self, documentos_encontrados):
+    def _obtener_nombre_documento(self, nombre_doc):
+        """Obtiene el nombre del item clave basándose en los aliases"""
+        nombre_doc_norm = nombre_doc.lower()
+        for nombre_completo, aliases in settings.items_clave.items():
+            if any(alias.lower() in nombre_doc_norm for alias in aliases):
+                return nombre_completo
+        return nombre_doc
+
+    def _poblar_resultados(self, documentos_encontrados, filtro_item='(Todos)'):
         """Puebla el treeview con resultados"""
         try:
-            # Limpiar resultados anteriores
             self.resultados.delete(*self.resultados.get_children())
             settings.ruta_por_iid.clear()
             self.selecciones.clear()
 
+            # Si el filtro es específico, ocultar columna Documento
+            if filtro_item and filtro_item != '(Todos)':
+                self.resultados.column("Documento", width=0, stretch=False)
+            else:
+                self.resultados.column("Documento", width=200, minwidth=150, stretch=True)
+
             if not documentos_encontrados:
                 self.status_bar.config(text="Sin resultados")
+                self._mostrar_placeholder()
                 return
 
-            # Insertar resultados con zebra stripes
+            # Mostrar la tabla y ocultar placeholder
+            self._mostrar_resultados()
+
             for i, doc in enumerate(documentos_encontrados):
                 tag = 'even' if i % 2 == 0 else 'odd'
+                nombre_doc = self._obtener_nombre_documento(doc.get('nombre', ''))
 
-                # Convertir nombre del archivo a nombre del glosario
-                nombre_mostrar = self._convertir_nombre_a_glosario(doc['nombre'])
-
-                # Agregar tag - intentar con checkbox, sino solo tag simple
                 if self.font_checkbox:
                     checkbox_tag = ('checkbox', tag)
                 else:
@@ -745,34 +816,194 @@ class DocentesView:
                     doc['universidad'].title(),
                     doc['programa'].title(),
                     doc['estudiante'].title(),
-                    nombre_mostrar
+                    nombre_doc
                 ), tags=checkbox_tag)
                 settings.ruta_por_iid[iid] = doc['ruta']
                 self.selecciones[iid] = True
 
-            # Actualizar status bar
             self.status_bar.config(text=f"Mostrando {len(documentos_encontrados)} documento(s)")
 
         except Exception as e:
             print(f"[ERROR] Error al poblar resultados: {e}")
-            # Reintentar sin tags complicadas
-            try:
-                self.resultados.delete(*self.resultados.get_children())
-                for doc in documentos_encontrados:
-                    nombre_mostrar = self._convertir_nombre_a_glosario(doc['nombre'])
-                    iid = self.resultados.insert("", "end", values=(
-                        "☐",
-                        doc['universidad'].title(),
-                        doc['programa'].title(),
-                        doc['estudiante'].title(),
-                        nombre_mostrar
-                    ))
-                    settings.ruta_por_iid[iid] = doc['ruta']
-                    self.selecciones[iid] = True
-                self.status_bar.config(text=f"Mostrando {len(documentos_encontrados)} documento(s)")
-            except Exception as e2:
-                print(f"[ERROR] Reintento sin tags también falló: {e2}")
-                self.status_bar.config(text=f"Error al mostrar: {e2}")
+    
+    def _obtener_documentos_estudiante(self, doc):
+        """Obtiene todos los documentos de un estudiante específico"""
+        docs = []
+        for d in settings.documentos_drive:
+            if (d['universidad'] == doc['universidad'] and 
+                d['programa'] == doc['programa'] and 
+                d['estudiante'] == doc['estudiante']):
+                docs.append(d)
+        return docs
+    
+    def _mostrar_panel_detalles(self, doc, event=None, x_root=None, y_root=None):
+        """Muestra una ventana centrada con los documentos del estudiante"""
+        # Obtener todos los documentos del estudiante
+        todos_docs = self._obtener_documentos_estudiante(doc)
+        
+        # Mapear tipos a rutas usando el tipo del glosario
+        tipos_rutas = {}
+        for d in todos_docs:
+            tipo = self._obtener_tipo_documento(d['nombre'])
+            if tipo:
+                tipos_rutas[tipo] = d['ruta']
+        
+        # Obtener tipos únicos con iconos y colores
+        ICONOS_TIPOS = {
+            'Matrícula': '📝',
+            'Cédula': '🪪',
+            'Acción de Personal': '👤',
+            'Certificado': '📜',
+            'Título': '🎓',
+            'Diploma': '📃',
+            'Pensum': '📚',
+            'Homologación': '✅',
+        }
+        
+        COLORES_TIPOS = {
+            'Matrícula': '#10B981',
+            'Cédula': '#3B82F6',
+            'Acción de Personal': '#8B5CF6',
+            'Certificado': '#F59E0B',
+            'Título': '#EF4444',
+            'Diploma': '#EC4899',
+            'Pensum': '#6366F1',
+            'Homologación': '#14B8A6',
+        }
+        
+        # Crear ventana centrada
+        popup = tk.Toplevel(self.ventana)
+        popup.title(f"Documentos de {doc['estudiante'].title()}")
+        popup.configure(bg=COLOR_FONDO_MAIN)
+        
+        # Calcular tamaño y centrar
+        num_docs = len(tipos_rutas)
+        
+        # Calcular ancho basado en el nombre más largo
+        ancho_base = max(400, len(doc['estudiante']) * 10 + 200)
+        ancho = min(600, ancho_base)
+        
+        alto = min(500, num_docs * 55 + 120)
+        
+        # Centrar en pantalla
+        pantalla_ancho = self.ventana.winfo_screenwidth()
+        pantalla_alto = self.ventana.winfo_screenheight()
+        x = (pantalla_ancho - ancho) // 2
+        y = (pantalla_alto - alto) // 2
+        popup.geometry(f"{ancho}x{alto}+{x}+{y}")
+        
+        # Permitir cambiar tamaño
+        popup.resizable(True, True)
+        
+        # Header azul
+        header = tk.Frame(popup, bg=COLOR_PRIMARY)
+        header.pack(fill='x')
+        header.pack_propagate(False)
+        
+        # Contenedor del nombre (para que no se corte)
+        nombre_frame = tk.Frame(header, bg=COLOR_PRIMARY)
+        nombre_frame.pack(side='left', fill='x', expand=True, padx=15, pady=12)
+        
+        tk.Label(
+            nombre_frame,
+            text=f"📄 {doc['estudiante'].title()}",
+            font=('Segoe UI', 14, 'bold'),
+            fg='white',
+            bg=COLOR_PRIMARY,
+            anchor='w'
+        ).pack(side='left', fill='x')
+        
+        # Botón cerrar
+        tk.Button(
+            header,
+            text="✕",
+            font=('Segoe UI', 12, 'bold'),
+            bg=COLOR_PRIMARY,
+            fg='white',
+            relief='flat',
+            bd=0,
+            width=3,
+            cursor='hand2',
+            command=popup.destroy
+        ).pack(side='right', padx=10, pady=10)
+        
+        # Info del estudiante (solo universidad y programa, limpios)
+        info = f"{doc['universidad'].title()} - {doc['programa'].title()}"
+        tk.Label(
+            popup,
+            text=info,
+            font=('Segoe UI', 11),
+            fg=COLOR_TEXTO_SEC,
+            bg=COLOR_FONDO_MAIN,
+            anchor='w',
+            wraplength=ancho - 40
+        ).pack(pady=(15, 5), padx=20, fill='x')
+        
+        # Título
+        tk.Label(
+            popup,
+            text="DOCUMENTOS",
+            font=('Segoe UI', 11, 'bold'),
+            fg=COLOR_TEXTO,
+            bg=COLOR_FONDO_MAIN
+        ).pack(pady=(10, 5), padx=20, anchor='w')
+        
+        # Lista de documentos con scroll
+        frame_docs = tk.Frame(popup, bg=COLOR_FONDO_MAIN)
+        frame_docs.pack(fill='both', expand=True, padx=20, pady=(0, 20))
+        frame_docs.pack_propagate(False)
+        
+        canvas = tk.Canvas(frame_docs, bg=COLOR_FONDO_MAIN, highlightthickness=0)
+        scrollbar = tk.Scrollbar(frame_docs, orient='vertical', command=canvas.yview)
+        
+        frame_lista = tk.Frame(canvas, bg=COLOR_FONDO_MAIN)
+        canvas.create_window((0, 0), window=frame_lista, anchor='nw')
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scrollbar.pack(side='right', fill='y')
+        canvas.pack(side='left', fill='both', expand=True)
+        
+        def on_configure(event):
+            canvas.configure(scrollregion=canvas.bbox('all'))
+        frame_lista.bind('<Configure>', on_configure)
+        
+        # Crear botón para cada tipo de documento
+        for tipo in sorted(tipos_rutas.keys()):
+            icono = ICONOS_TIPOS.get(tipo, '📄')
+            color = COLORES_TIPOS.get(tipo, '#64748B')
+            
+            btn = tk.Button(
+                frame_lista,
+                text=f"{icono}  {tipo}",
+                font=('Segoe UI', 12),
+                bg=color,
+                fg='white',
+                relief='flat',
+                anchor='w',
+                padx=20,
+                pady=14,
+                cursor='hand2',
+                command=lambda r=tipos_rutas[tipo]: (abrir_pdf(r), popup.destroy())
+            )
+            btn.pack(fill='x', pady=5, ipady=5)
+        
+        # Cerrar con Escape
+        popup.bind('<Escape>', lambda e: popup.destroy())
+        
+        # Focus en popup
+        popup.focus_set()
+    
+    def on_select_result(self, event):
+        """Maneja la selección de un estudiante en la tabla"""
+        item = self.resultados.focus()
+        if item and item in settings.ruta_por_iid:
+            ruta = settings.ruta_por_iid[item]
+            # Buscar el documento completo
+            for doc in settings.documentos_drive:
+                if doc['ruta'] == ruta:
+                    # Mostrar panel de documentos
+                    self._mostrar_panel_detalles(doc)
+                    break
 
     def _convertir_nombre_a_glosario(self, nombre_archivo):
         """Convierte el nombre del archivo a su nombre completo del glosario"""
@@ -782,16 +1013,42 @@ class DocentesView:
         for nombre_completo, aliases in settings.items_clave.items():
             for alias in aliases:
                 if alias.lower() in nombre_lower:
-                    partes = nombre_lower.split(alias.lower())
-                    if len(partes) > 1:
-                        sufijo = partes[1]
-                        nombre_limpio = nombre_completo.split('. ', 1)[-1]
-                        return f"{nombre_limpio}{sufijo}".title()
-                    else:
-                        nombre_limpio = nombre_completo.split('. ', 1)[-1]
-                        return nombre_limpio
+                    # Devolver solo el nombre del tipo (ej: "Matrícula")
+                    tipo_nombre = nombre_completo.split('. ', 1)[-1]
+                    return tipo_nombre
 
         return nombre_archivo.title()
+    
+    def _obtener_tipo_documento(self, nombre_archivo):
+        """Obtiene solo el tipo de documento del glosario (ej: Matrícula, Adenda, etc.)"""
+        nombre_lower = nombre_archivo.lower()
+        
+        for nombre_completo, aliases in settings.items_clave.items():
+            for alias in aliases:
+                if alias.lower() in nombre_lower:
+                    # Devolver solo el nombre del tipo
+                    return nombre_completo.split('. ', 1)[-1]
+        
+        return None
+    
+    def _obtener_tipos_documentos_estudiante(self, doc):
+        """Obtiene los tipos de documentos únicos del estudiante usando el glosario"""
+        tipos = set()
+        for d in settings.documentos_drive:
+            if (d['universidad'] == doc['universidad'] and 
+                d['programa'] == doc['programa'] and 
+                d['estudiante'] == doc['estudiante']):
+                
+                nombre_lower = d['nombre'].lower()
+                # Buscar el tipo en el glosario
+                for tipo_nombre, aliases in settings.items_clave.items():
+                    for alias in aliases:
+                        if alias.lower() in nombre_lower:
+                            # Extraer solo el nombre del tipo (ej: "Matrícula" de "Matrícula")
+                            tipo_limpio = tipo_nombre.split('. ', 1)[-1]
+                            tipos.add(tipo_limpio)
+                            break
+        return tipos
 
     def _inicializar_filtros(self):
         """Inicializa los filtros cargando las opciones"""
@@ -840,22 +1097,36 @@ class DocentesView:
                               self.combo_estudiante, self.combo_item_clave)
 
     def limpiar_filtros(self):
-        """Limpia todos los filtros"""
+        """Limpia todos los filtros y muestra el placeholder"""
         self.search_text.set('')
         self.combo_universidad.set('(Todos)')
         self.combo_programa.set('(Todos)')
         self.combo_estudiante.set('(Todos)')
         self.combo_item_clave.set('(Todos)')
-        self.buscar()
+        # Actualizar programas y estudiantes dependientes
+        self.actualizar_programas()
+        self.actualizar_estudiantes()
+        self.actualizar_items_clave()
+        # Mostrar placeholder en vez de buscar
+        self._mostrar_placeholder()
+
+    def _mostrar_placeholder(self):
+        """Muestra el placeholder inicial en la tabla"""
+        self.resultados.delete(*self.resultados.get_children())
+        settings.ruta_por_iid.clear()
+        self.selecciones.clear()
+        self.frame_placeholder.pack(fill='both', expand=True)
+        self.resultados.pack_forget()
+        self.status_bar.config(text="Usa los filtros y presiona 'Filtrar' para buscar documentos")
+
+    def _mostrar_resultados(self):
+        """Muestra la tabla de resultados y oculta el placeholder"""
+        self.frame_placeholder.pack_forget()
+        self.resultados.pack(fill="both", expand=True)
 
     # ==============================================================================
     # EVENT HANDLERS
     # ==============================================================================
-
-    def on_select_result(self, event):
-        """Maneja la selección de un resultado"""
-        # Limpiar detalles al cambiar selección
-        pass
 
     def on_tree_click(self, event):
         """Maneja clic en el Treeview - alterna checkbox"""
@@ -900,8 +1171,8 @@ class DocentesView:
         for item in self.resultados.get_children():
             valores = self.resultados.item(item)['values']
             if valores and valores[0] == '☑':
-                # Obtener ruta del documento (columna 5 = index 4)
-                if len(valores) >= 5:
+                # Obtener ruta del documento (columna 4 = index 3)
+                if len(valores) >= 4:
                     iid = item
                     if iid in settings.ruta_por_iid:
                         ruta = settings.ruta_por_iid[iid]
@@ -994,12 +1265,12 @@ class DocentesView:
             else:
                 return
 
-        # Si ya está en caché Y hay documentos reales, solo actualizar el label y poblar resultados
+        # Si ya está en caché Y hay documentos reales, solo actualizar el label y mostrar placeholder
         if settings.documentos_cargados and settings.documentos_drive:
             total_docs = len(settings.documentos_drive)
             self.status_bar.config(text=f"✓ {total_docs} documentos cargados (en caché)")
-            # Poblar treeview con documentos en caché
-            self.buscar()
+            # Mostrar placeholder para que el usuario elija filtros
+            self._mostrar_placeholder()
             return
 
         # Si documentos_cargados es True pero documentos_drive está vacío,
@@ -1067,8 +1338,8 @@ class DocentesView:
             mensaje = f"✓ {docs_cargados} documentos cargados"
             self.status_bar.config(text=mensaje)
 
-            # Poblar treeview con todos los documentos inicialmente
-            self.buscar()
+            # Mostrar placeholder en vez de poblar automáticamente
+            self._mostrar_placeholder()
 
             # Mostrar mensaje de éxito
             messagebox.showinfo("Sincronización",

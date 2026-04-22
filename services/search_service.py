@@ -10,6 +10,9 @@ def buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item):
     """
     Busca documentos según los filtros aplicados.
     Las búsquedas son tolerantes a tildes, mayúsculas/minúsculas y eñes.
+    
+    IMPORTANTE: Retorna solo estudiantes únicos (un documento por estudiante)
+    para mostrar en la tabla.
 
     Args:
         filtro_u: Filtro de universidad
@@ -18,7 +21,7 @@ def buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item):
         filtro_nombre: Filtro de nombre de documento
         filtro_item: Filtro de item clave
     Returns:
-        list: Lista de documentos encontrados
+        list: Lista de documentos encontrados (uno por estudiante único)
     """
     encontrados = []
 
@@ -50,6 +53,7 @@ def buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item):
     except Exception as e:
         print(f"[ERROR] buscar_documentos: {e}")
 
+    # Sin deduplicación — mostrar todos los documentos encontrados
     return encontrados
 
 
