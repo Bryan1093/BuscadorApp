@@ -155,12 +155,18 @@ class DocentesView:
         self.logo_placeholder = None
         try:
             from utils.file_utils import resource_path
-            logo_path = resource_path('imagenes/logouce.png')
+            logo_path = resource_path('imagenes/logouce3.png')
             logo_img = Image.open(logo_path)
-            logo_img = logo_img.resize((200, 200), Image.LANCZOS)
+            logo_img = logo_img.resize((350, 350), Image.LANCZOS)
             self.logo_placeholder = ImageTk.PhotoImage(logo_img)
         except Exception as e:
             print(f"[WARN] No se pudo cargar logo: {e}")
+
+        # Variable para animación del spinner
+        self._spinner_dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+        self._spinner_index = 0
+        self._spinner_job = None
+        self.frame_spinner = None
 
         # Configurar estilos modernos
         self._configurar_estilos()
@@ -593,19 +599,23 @@ class DocentesView:
         self.frame_placeholder = tk.Frame(resultados_frame, bg=COLOR_FONDO_MAIN)
         self.frame_placeholder.pack(fill='both', expand=True)
 
-        tk.Label(
-            self.frame_placeholder,
-            image=self.logo_placeholder,
-            bg=COLOR_FONDO_MAIN
-        ).pack(pady=20)
+        # Contenedor centrado
+        frame_centrado = tk.Frame(self.frame_placeholder, bg=COLOR_FONDO_MAIN)
+        frame_centrado.place(relx=0.5, rely=0.5, anchor='center')
 
         tk.Label(
-            self.frame_placeholder,
+            frame_centrado,
+            image=self.logo_placeholder,
+            bg=COLOR_FONDO_MAIN
+        ).pack(pady=(0, 15))
+
+        tk.Label(
+            frame_centrado,
             text="Usa los filtros y presiona '🔍 Filtrar' para buscar documentos",
             font=('Segoe UI', 14),
             fg=COLOR_TEXTO_SEC,
             bg=COLOR_FONDO_MAIN
-        ).pack(pady=5)
+        ).pack()
 
         columnas = ("Seleccion", "Universidad", "Programa", "Estudiante", "Documento")
 
@@ -703,11 +713,13 @@ class DocentesView:
         # Mensaje si no hay rutas
         if not settings.ruta_doctorados and not settings.ruta_doctorados2:
             self.status_bar.config(text="No se encontró ninguna ruta de doctorados. No hay documentos cargados.")
+            self._mostrar_placeholder()
         else:
+            # Primero mostrar spinner de carga
+            self._mostrar_spinner("Cargando documentos...")
+            
             # Cargar documentos (usará caché si ya está cargado)
             self._cargar_documentos()
-            # Mostrar placeholder inicial en vez de buscar automáticamente
-            self._mostrar_placeholder()
 
     # ==============================================================================
     # MÉTODOS DE BÚSQUEDA CON DEBOUNCE
@@ -763,14 +775,33 @@ class DocentesView:
         self._poblar_resultados(encontrados, filtro_item)
 
     def buscar(self):
-        """Ejecuta la búsqueda de documentos"""
+        """Ejecuta la búsqueda de documentos con spinner"""
         filtro_u = self.combo_universidad.get()
         filtro_p = self.combo_programa.get()
         filtro_e = self.combo_estudiante.get()
         filtro_nombre = self.search_text.get().strip().lower()
         filtro_item = self.combo_item_clave.get()
 
+        # Mostrar spinner mientras carga
+        self._mostrar_spinner("Filtrando documentos...")
+        
+        # Usar threading para no bloquear UI
+        thread = threading.Thread(
+            target=self._busqueda_filtrar,
+            args=(filtro_nombre, filtro_u, filtro_p, filtro_e, filtro_item),
+            daemon=True
+        )
+        thread.start()
+    
+    def _busqueda_filtrar(self, filtro_nombre, filtro_u, filtro_p, filtro_e, filtro_item):
+        """Método ejecutado en thread separado para filtrar"""
         encontrados = buscar_documentos(filtro_u, filtro_p, filtro_e, filtro_nombre, filtro_item)
+        # Actualizar UI en el thread principal
+        self.ventana.after(0, lambda: self._busqueda_done(encontrados, filtro_item))
+    
+    def _busqueda_done(self, encontrados, filtro_item):
+        """Se ejecuta cuando termina la búsqueda"""
+        self._ocultar_spinner()
         self._poblar_resultados(encontrados, filtro_item)
 
     def _obtener_nombre_documento(self, nombre_doc):
@@ -1124,6 +1155,62 @@ class DocentesView:
         self.frame_placeholder.pack_forget()
         self.resultados.pack(fill="both", expand=True)
 
+    def _mostrar_spinner(self, mensaje="Cargando..."):
+        """Muestra un spinner de carga estilo IntelliJ"""
+        # Ocultar placeholder y tabla
+        if self.frame_placeholder:
+            self.frame_placeholder.pack_forget()
+        self.resultados.pack_forget()
+
+        # Crear frame del spinner si no existe
+        if not hasattr(self, '_frame_spinner') or self._frame_spinner is None:
+            # Buscar el frame de resultados
+            self._frame_spinner = tk.Frame(self.resultados.master, bg=COLOR_FONDO_MAIN)
+            
+            # Contenedor centrado
+            frame_centrado = tk.Frame(self._frame_spinner, bg=COLOR_FONDO_MAIN)
+            frame_centrado.place(relx=0.5, rely=0.5, anchor='center')
+            
+            # Label del spinner
+            self._label_spinner = tk.Label(
+                frame_centrado,
+                text=self._spinner_dots[0],
+                font=('Segoe UI', 24),
+                fg=COLOR_PRIMARY,
+                bg=COLOR_FONDO_MAIN
+            )
+            self._label_spinner.pack()
+            
+            # Label del mensaje
+            self._msg_spinner = tk.Label(
+                frame_centrado,
+                text=mensaje,
+                font=('Segoe UI', 12),
+                fg=COLOR_TEXTO_SEC,
+                bg=COLOR_FONDO_MAIN
+            )
+            self._msg_spinner.pack(pady=(10, 0))
+        
+        self._frame_spinner.pack(fill='both', expand=True)
+        self._msg_spinner.config(text=mensaje)
+        
+        # Iniciar animación
+        self._animar_spinner()
+    
+    def _animar_spinner(self):
+        """Anima el spinner"""
+        self._spinner_index = (self._spinner_index + 1) % len(self._spinner_dots)
+        self._label_spinner.config(text=self._spinner_dots[self._spinner_index])
+        self._spinner_job = self.ventana.after(80, self._animar_spinner)
+    
+    def _ocultar_spinner(self):
+        """Oculta el spinner de carga"""
+        if self._spinner_job:
+            self.ventana.after_cancel(self._spinner_job)
+            self._spinner_job = None
+        if hasattr(self, '_frame_spinner') and self._frame_spinner:
+            self._frame_spinner.pack_forget()
+
     # ==============================================================================
     # EVENT HANDLERS
     # ==============================================================================
@@ -1281,6 +1368,9 @@ class DocentesView:
 
         # Mostrar mensaje de carga
         self.status_bar.config(text="Cargando documentos...")
+        
+        # Mostrar spinner de carga
+        self._mostrar_spinner("Cargando documentos...")
 
         # Variables para compartir entre threads
         resultado = {'docs_cargados': 0, 'error': None}
@@ -1322,6 +1412,9 @@ class DocentesView:
 
         def on_complete():
             """Callback cuando termina la carga"""
+            # Ocultar spinner siempre
+            self._ocultar_spinner()
+            
             # Verificar si hubo error
             if resultado['error']:
                 self.status_bar.config(text=f"Error: {resultado['error']}")
@@ -1338,7 +1431,8 @@ class DocentesView:
             mensaje = f"✓ {docs_cargados} documentos cargados"
             self.status_bar.config(text=mensaje)
 
-            # Mostrar placeholder en vez de poblar automáticamente
+            # Ocultar spinner y mostrar placeholder
+            self._ocultar_spinner()
             self._mostrar_placeholder()
 
             # Mostrar mensaje de éxito

@@ -3,11 +3,15 @@ Punto de entrada principal de la aplicación AppBuscador
 Aplicación modularizada para búsqueda de documentos de doctorados y oficios
 """
 import tkinter as tk
+from tkinter import messagebox
+import threading
+import time
 from ui.views.login_view import mostrar_login, cerrar_sesion
 from ui.views.selection_view import mostrar_seleccion
 from ui.views.docentes_view import mostrar_docentes, DocentesView
 from ui.views.oficios_view import mostrar_oficios, OficiosView
 from ui.views.acerca_de_view import mostrar_acerca_de, AcercaDeView
+from ui.views.splash_view import mostrar_splash
 from utils.path_utils import encontrar_rutas_drive
 import config.settings as settings
 
@@ -18,24 +22,55 @@ class AppBuscador:
     def __init__(self):
         """Inicializa la aplicación"""
         self.root = tk.Tk()
-        self.root.title("AppBuscador - Sistema de Gestión de Doctorados")
+        self.root.title("BuscadorApp")
         
         # Instancias de vistas (para mantener estado)
         self.docentes_view = None
         self.oficios_view = None
         self.acerca_de_view = None
         
-        # Inicializar rutas de Drive
-        self._inicializar_rutas()
+        # MOSTRAR SPLASH SCREEN EN LA MISMA VENTANA
+        self._mostrar_splash()
+    
+    def _mostrar_splash(self):
+        """Muestra el splash screen en la misma ventana"""
+        from ui.views.splash_view import mostrar_splash
+        self.splash = mostrar_splash(self.root)
+        self.splash.actualizar_mensaje("Inicializando...")
         
-        # Mostrar login
+        # Luego de mostrar splash, hacer carga en background
+        self._iniciar_carga()
+    
+    def _iniciar_carga(self):
+        """Inicia la carga en background"""
+        self.splash.actualizar_mensaje("Cargando...")
+        
+        def cargar():
+            self._inicializar_rutas()
+            time.sleep(0.3)
+            self.root.after(0, self._cerrar_splash_y_login)
+        
+        threading.Thread(target=cargar, daemon=True).start()
+    
+    def _cerrar_splash_y_login(self):
+        """Cierra splash y muestra login"""
+        from ui.views.login_view import mostrar_login
+        
+        # Cambiar fondo primero
+        self.root.configure(bg="#f5f7fa")
+        self.root.overrideredirect(False)
+        self.root.attributes('-topmost', False)
+        
+        # Destruir widgets
+        for w in self.root.winfo_children():
+            w.destroy()
+        
+# Mostrar login
         mostrar_login(self.root, self.on_login_success)
     
     def _inicializar_rutas(self):
         """Inicializa las rutas de Google Drive"""
         self._reintentar_rutas()
-        
-        # Debug: Verificar rutas encontradas
         print("\n" + "="*60)
         print("INICIALIZACIÓN DE RUTAS")
         print("="*60)
