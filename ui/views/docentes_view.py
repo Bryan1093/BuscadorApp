@@ -534,7 +534,23 @@ class DocentesView:
             bg=COLOR_FONDO_MAIN
         ).pack(side='left')
 
-        # Toolbar simplificada - Solo botón Descargar
+        # Toolbar con botones Abrir y Descargar
+        # Botón Abrir - Cuadrado pequeño
+        btn_abrir = tk.Button(
+            toolbar,
+            text="📂",  # Símbolo de carpeta
+            font=('Segoe UI', 14),
+            bg="#475569",  # Gris oscuro
+            fg="white",
+            relief="flat",
+            bd=0,
+            width=4,
+            height=1,
+            cursor="hand2",
+            command=self.abrir_pdf_handler
+        )
+        btn_abrir.pack(side='right', padx=(0, 5))
+
         # Botón Descargar - Cuadrado pequeño con icono
         btn_descargar = tk.Button(
             toolbar,
@@ -549,7 +565,7 @@ class DocentesView:
             cursor="hand2",
             command=self.descargar_seleccionados
         )
-        btn_descargar.pack(side='right')
+        btn_descargar.pack(side='right', padx=(5, 0))
 
         # --- Buscador Moderno con Borde ---
         # Frame contenedor con borde (usando un frame subyacente)
@@ -1026,15 +1042,8 @@ class DocentesView:
     
     def on_select_result(self, event):
         """Maneja la selección de un estudiante en la tabla"""
-        item = self.resultados.focus()
-        if item and item in settings.ruta_por_iid:
-            ruta = settings.ruta_por_iid[item]
-            # Buscar el documento completo
-            for doc in settings.documentos_drive:
-                if doc['ruta'] == ruta:
-                    # Mostrar panel de documentos
-                    self._mostrar_panel_detalles(doc)
-                    break
+        # Ya no se muestra el popup - ahora se permite duplicación
+        pass
 
     def _convertir_nombre_a_glosario(self, nombre_archivo):
         """Convierte el nombre del archivo a su nombre completo del glosario"""
@@ -1267,8 +1276,13 @@ class DocentesView:
                             marcados.append(ruta)
 
         if marcados:
-            # Descarga masiva
-            self._descarga_masiva(marcados)
+            # SI SOLO ES 1 → descargar directo como PDF
+            if len(marcados) == 1:
+                from services.file_service import descargar_pdf
+                descargar_pdf(marcados[0])
+            else:
+                # SI SON 2+ → descargar como ZIP
+                self._descarga_masiva(marcados)
             return
 
         # PRIORIDAD 2: Archivo con foco
@@ -1276,7 +1290,9 @@ class DocentesView:
         if item and item in settings.ruta_por_iid:
             ruta = settings.ruta_por_iid[item]
             if ruta:
-                abrir_pdf(ruta)
+                # 1 archivo = descargar directo
+                from services.file_service import descargar_pdf
+                descargar_pdf(ruta)
         else:
             messagebox.showwarning("Sin selección", "Selecciona un documento para descargar.")
 
@@ -1310,11 +1326,30 @@ class DocentesView:
         self.abrir_pdf_handler()
 
     def abrir_pdf_handler(self):
-        """Abre el PDF seleccionado"""
+        """Abre el PDF seleccionado o los marcados"""
+        # PRIORIDAD 1: Archivos marcados (☑)
+        marcados = []
+        for item in self.resultados.get_children():
+            valores = self.resultados.item(item)['values']
+            if valores and valores[0] == '☑':
+                iid = item
+                if iid in settings.ruta_por_iid:
+                    ruta = settings.ruta_por_iid[iid]
+                    if ruta:
+                        marcados.append(ruta)
+
+        if marcados:
+            # Abrir TODOS los marcados
+            for ruta in marcados:
+                abrir_pdf(ruta)
+            return
+
+        # PRIORIDAD 2: Archivo con foco
         item = self.resultados.focus()
         if item and item in settings.ruta_por_iid:
             ruta = settings.ruta_por_iid[item]
-            abrir_pdf(ruta)
+            if ruta:
+                abrir_pdf(ruta)
         else:
             messagebox.showwarning("Selecciona algo", "Debes seleccionar un resultado.")
 
@@ -1330,7 +1365,8 @@ class DocentesView:
 
     def _cargar_documentos(self):
         """Carga los documentos desde las rutas configuradas usando threading"""
-        # Verificar si las rutas están disponibles
+        # Siempre forzar recarga cuando el usuario hace click en Sincronizar
+        # Pero primero verificar si las rutas están disponibles
         if not settings.ruta_doctorados and not settings.ruta_doctorados2:
             retry = messagebox.askretrycancel(
                 "Rutas no encontradas",
@@ -1352,19 +1388,9 @@ class DocentesView:
             else:
                 return
 
-        # Si ya está en caché Y hay documentos reales, solo actualizar el label y mostrar placeholder
-        if settings.documentos_cargados and settings.documentos_drive:
-            total_docs = len(settings.documentos_drive)
-            self.status_bar.config(text=f"✓ {total_docs} documentos cargados (en caché)")
-            # Mostrar placeholder para que el usuario elija filtros
-            self._mostrar_placeholder()
-            return
-
-        # Si documentos_cargados es True pero documentos_drive está vacío,
-        # forzar recarga
-        if settings.documentos_cargados and not settings.documentos_drive:
-            print("[WARN] documentos_cargados=True pero documentos_drive vacío - forzando recarga")
-            settings.documentos_cargados = False
+        # Forzar recarga aunque ya estén cargados
+        settings.documentos_cargados = False
+        settings.documentos_drive = []
 
         # Mostrar mensaje de carga
         self.status_bar.config(text="Cargando documentos...")

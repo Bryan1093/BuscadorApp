@@ -47,7 +47,7 @@ class AppBuscador:
         
         def cargar():
             self._inicializar_rutas()
-            time.sleep(0.3)
+            time.sleep(2)
             self.root.after(0, self._cerrar_splash_y_login)
         
         threading.Thread(target=cargar, daemon=True).start()
@@ -56,16 +56,9 @@ class AppBuscador:
         """Cierra splash y muestra login"""
         from ui.views.login_view import mostrar_login
         
-        # Cambiar fondo primero
-        self.root.configure(bg="#f5f7fa")
         self.root.overrideredirect(False)
         self.root.attributes('-topmost', False)
         
-        # Destruir widgets
-        for w in self.root.winfo_children():
-            w.destroy()
-        
-# Mostrar login
         mostrar_login(self.root, self.on_login_success)
     
     def _inicializar_rutas(self):
@@ -80,43 +73,31 @@ class AppBuscador:
         print("="*60 + "\n")
     
     def _reintentar_rutas(self):
-        """Reintenta encontrar las rutas de Google Drive"""
         settings.ruta_doctorados, settings.ruta_oficios, settings.ruta_doctorados2 = \
             encontrar_rutas_drive()
     
     def on_login_success(self, ventana, nombre_usuario):
-        """
-        Callback ejecutado al iniciar sesión exitosamente
-        Args:
-            ventana: Ventana principal
-            nombre_usuario: Nombre del usuario que inició sesión
-        """
         mostrar_seleccion(ventana, nombre_usuario, 
                          lambda: self.mostrar_modulo_docentes(ventana),
                          lambda: self.mostrar_modulo_oficios(ventana),
                          lambda: self.mostrar_acerca_de(ventana))
     
     def mostrar_modulo_docentes(self, ventana):
-        """
-        Muestra el módulo de docentes (reutiliza instancia si ya existe)
-        Args:
-            ventana: Ventana principal
-        """
-        if self.docentes_view is None:
-            self.docentes_view = DocentesView(
-                ventana,
-                lambda: self.volver_a_seleccion(ventana),
-                lambda: self.cerrar_sesion_handler(ventana)
-            )
-        else:
-            self.docentes_view.refrescar_vista()
+        if self.docentes_view is not None:
+            try:
+                self.docentes_view.cerrar()
+            except:
+                pass
+        self.docentes_view = None
+        
+        self.docentes_view = DocentesView(
+            ventana,
+            lambda: self.volver_a_seleccion(ventana),
+            lambda: self.cerrar_sesion_handler(ventana)
+        )
     
     def mostrar_modulo_oficios(self, ventana):
-        """
-        Muestra el módulo de oficios (reutiliza instancia si ya existe)
-        Args:
-            ventana: Ventana principal
-        """
+        """Muestra el módulo de oficios"""
         if self.oficios_view is None:
             self.oficios_view = OficiosView(
                 ventana,

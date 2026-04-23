@@ -1,7 +1,7 @@
 import json
 import hashlib
 
-ruta_json = r'C:\Users\user\Pictures\BuscadorPDFs\AppBuscador\Users\usuarios.json'
+ruta_json = r'C:\Users\VIVTUS\Pictures\BuscadorApp\data\usuarios.json'
 
 with open(ruta_json, 'r', encoding='utf-8') as f:
     usuarios = json.load(f)
